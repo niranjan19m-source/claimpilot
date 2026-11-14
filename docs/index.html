@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClaimPilot — Autonomous Claims Triage Agent</title>
+<meta name="description" content="ClaimPilot plans an investigation, calls tools, verifies its own evidence and routes insurance claims with a human in the loop. Open source. LangGraph, Claude, FastAPI, Next.js.">
+<meta property="og:title" content="ClaimPilot — Intelligent claims. Transparent decisions.">
+<meta property="og:description" content="An autonomous AI agent for insurance claims triage: severity, coverage and fraud-risk assessment with every decision traced to evidence.">
+<meta property="og:image" content="https://niranjan19m-source.github.io/claimpilot/live-investigation.png">
+<meta name="theme-color" content="#09090b">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #09090b; --card: #111113; --raised: #17171a; --sunken: #0c0c0e;
+    --line: rgb(255 255 255 / .08); --line-2: rgb(255 255 255 / .14);
+    --fg: #f4f4f5; --fg-2: #d4d4d8; --muted: #a1a1aa; --subtle: #71717a;
+    --accent: #818cf8; --accent-strong: #6366f1;
+    --ok: #34d399; --risk: #fb7185; --warn: #fbbf24;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; color-scheme: dark; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.6 Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background-image: radial-gradient(rgb(255 255 255 / .035) 1px, transparent 1px); background-size: 22px 22px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+  @media (min-width: 640px) { .wrap { padding: 0 24px; } }
+
+  /* nav */
+  nav { position: sticky; top: 0; z-index: 10; background: rgb(9 9 11 / .8); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 56px; gap: 16px; }
+  .brand { display: flex; align-items: center; gap: 10px; color: var(--fg); font-weight: 600; letter-spacing: -.01em; }
+  .brand:hover { text-decoration: none; }
+  .logo { width: 28px; height: 28px; border-radius: 7px; background: var(--accent-strong); display: grid; place-items: center; }
+  .links { display: none; gap: 22px; font-size: 13.5px; }
+  .links a { color: var(--muted); }
+  .links a:hover { color: var(--fg); text-decoration: none; }
+  @media (min-width: 820px) { .links { display: flex; } }
+
+  /* buttons */
+  .btn { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 9px; font-weight: 500; font-size: 14px; border: 1px solid var(--line-2); color: var(--fg); background: var(--raised); white-space: nowrap; }
+  .btn:hover { text-decoration: none; background: #1f1f24; }
+  .btn.primary { background: var(--accent-strong); border-color: transparent; color: #fff; }
+  .btn.primary:hover { background: #5458e8; }
+  .btn.sm { height: 34px; padding: 0 12px; font-size: 13px; }
+
+  /* hero */
+  header.hero { padding: 72px 0 40px; text-align: center; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line-2); font-size: 12.5px; color: var(--muted); background: var(--card); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+  h1 { font-size: clamp(34px, 6vw, 58px); line-height: 1.05; letter-spacing: -.035em; margin: 22px auto 0; max-width: 820px; font-weight: 700; }
+  h1 span { color: var(--accent); }
+  .lede { max-width: 690px; margin: 20px auto 0; font-size: 17px; color: var(--muted); }
+  .cta { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 30px; }
+  .shot { margin-top: 48px; border-radius: 14px; border: 1px solid var(--line-2); overflow: hidden; background: var(--card); box-shadow: 0 30px 80px -30px rgb(99 102 241 / .35); }
+  .shot img { display: block; width: 100%; height: auto; max-height: 760px; object-fit: cover; object-position: top; }
+  .shot figcaption { padding: 10px 14px; font-size: 12.5px; color: var(--subtle); border-top: 1px solid var(--line); text-align: left; }
+
+  /* sections */
+  section { padding: 72px 0 8px; }
+  .eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+  h2 { font-size: clamp(26px, 3.6vw, 36px); letter-spacing: -.025em; line-height: 1.15; margin: 8px 0 12px; }
+  .sub { color: var(--muted); max-width: 720px; margin: 0 0 32px; }
+  .grid { display: grid; gap: 14px; grid-template-columns: 1fr; }
+  @media (min-width: 680px) { .grid.c2 { grid-template-columns: 1fr 1fr; } .grid.c3 { grid-template-columns: 1fr 1fr; } .grid.c4 { grid-template-columns: 1fr 1fr; } }
+  @media (min-width: 980px) { .grid.c3 { grid-template-columns: repeat(3, 1fr); } .grid.c4 { grid-template-columns: repeat(4, 1fr); } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+  .card h3 { margin: 0 0 6px; font-size: 15.5px; letter-spacing: -.01em; }
+  .card p { margin: 0; color: var(--muted); font-size: 14px; }
+  .icon { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; background: rgb(99 102 241 / .14); color: var(--accent); margin-bottom: 14px; }
+
+  /* problem */
+  .compare { display: grid; gap: 14px; grid-template-columns: 1fr; }
+  @media (min-width: 760px) { .compare { grid-template-columns: 1fr 1fr; } }
+  .compare ul { margin: 0; padding: 0; list-style: none; }
+  .compare li { padding: 9px 0; border-top: 1px solid var(--line); font-size: 14px; color: var(--fg-2); display: flex; gap: 10px; }
+  .compare li:first-child { border-top: 0; }
+  .x { color: var(--risk); } .ok { color: var(--ok); }
+
+  /* pipeline */
+  .pipe { display: grid; gap: 10px; grid-template-columns: 1fr; counter-reset: s; }
+  @media (min-width: 680px) { .pipe { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 980px) { .pipe { grid-template-columns: repeat(4, 1fr); } }
+  .step { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 16px 16px 52px; counter-increment: s; }
+  .step::before { content: counter(s, decimal-leading-zero); position: absolute; left: 16px; top: 16px; font: 500 12px var(--mono); color: var(--accent); }
+  .step b { display: block; font-size: 14.5px; margin-bottom: 2px; }
+  .step span { color: var(--muted); font-size: 13px; }
+  .who { display: inline-block; margin-top: 8px; font: 500 10.5px var(--mono); padding: 2px 7px; border-radius: 5px; letter-spacing: .02em; }
+  .who.llm { background: rgb(99 102 241 / .16); color: #c7d2fe; }
+  .who.code { background: rgb(52 211 153 / .12); color: var(--ok); }
+  .who.human { background: rgb(251 191 36 / .12); color: var(--warn); }
+  .loops { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 18px; font-size: 13px; color: var(--subtle); }
+  .loops b { color: var(--warn); font-weight: 500; }
+
+  /* split feature with screenshot */
+  .split { display: grid; gap: 28px; align-items: center; grid-template-columns: 1fr; margin-top: 44px; }
+  @media (min-width: 940px) { .split { grid-template-columns: 1fr 1.35fr; } .split.rev { grid-template-columns: 1.35fr 1fr; } .split.rev .txt { order: 2; } }
+  .split h3 { font-size: 22px; letter-spacing: -.02em; margin: 6px 0 10px; }
+  .split p { color: var(--muted); margin: 0 0 14px; }
+  .ticks { list-style: none; padding: 0; margin: 0; }
+  .ticks li { padding: 5px 0 5px 24px; position: relative; font-size: 14px; color: var(--fg-2); }
+  .ticks li::before { content: "✓"; position: absolute; left: 0; color: var(--ok); font-weight: 600; }
+  .frame { border-radius: 12px; border: 1px solid var(--line-2); overflow: hidden; background: var(--card); }
+  .frame img { display: block; width: 100%; height: auto; }
+
+  /* trace sample */
+  .terminal { background: var(--sunken); border: 1px solid var(--line-2); border-radius: 12px; overflow: hidden; }
+  .terminal .bar { display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-bottom: 1px solid var(--line); font: 11.5px var(--mono); color: var(--subtle); }
+  .terminal .bar i { width: 8px; height: 8px; border-radius: 50%; background: #3f3f46; }
+  .terminal pre { margin: 0; padding: 14px 16px; overflow-x: auto; font: 12.5px/1.75 var(--mono); color: var(--fg-2); }
+  .t { color: #52525b; } .a1 { color: #a5b4fc; } .a2 { color: #7dd3fc; } .a3 { color: #5eead4; } .a4 { color: #fcd34d; } .a5 { color: #f0abfc; } .a6 { color: #6ee7b7; } .r { color: #fda4af; }
+
+  /* tables */
+  .table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+  .table th { text-align: left; font-weight: 500; font-size: 12px; color: var(--subtle); padding: 12px 16px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  .table td { padding: 12px 16px; border-bottom: 1px solid var(--line); color: var(--fg-2); vertical-align: top; }
+  .table tr:last-child td { border-bottom: 0; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .tg { background: rgb(52 211 153 / .12); color: var(--ok); } .tr { background: rgb(251 113 133 / .13); color: var(--risk); }
+  .ty { background: rgb(251 191 36 / .12); color: var(--warn); } .tb { background: rgb(99 102 241 / .16); color: #c7d2fe; }
+  .mono { font-family: var(--mono); font-size: 12.5px; }
+
+  /* metrics */
+  .metric { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+  .metric .v { font-size: 30px; font-weight: 600; letter-spacing: -.02em; }
+  .metric .l { color: var(--muted); font-size: 13px; }
+  .note { margin-top: 16px; padding: 14px 16px; border-radius: 12px; border: 1px solid rgb(251 191 36 / .3); background: rgb(251 191 36 / .07); color: var(--fg-2); font-size: 14px; }
+  .note b { color: var(--warn); }
+
+  /* code */
+  pre.code { margin: 0; background: var(--sunken); border: 1px solid var(--line-2); border-radius: 12px; padding: 16px 18px; overflow-x: auto; font: 13px/1.7 var(--mono); color: var(--fg-2); }
+  .c { color: #52525b; }
+  .stack { display: flex; flex-wrap: wrap; gap: 8px; }
+  .stack span { padding: 6px 12px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--card); font-size: 13px; color: var(--fg-2); }
+
+  footer { margin-top: 88px; border-top: 1px solid var(--line); padding: 28px 0 40px; color: var(--subtle); font-size: 13px; }
+  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+</style>
+</head>
+<body>
+
+<nav aria-label="Primary">
+  <div class="wrap">
+    <a class="brand" href="#top">
+      <span class="logo" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
+      ClaimPilot
+    </a>
+    <div class="links">
+      <a href="#how">How it works</a>
+      <a href="#product">Product</a>
+      <a href="#scenarios">Scenarios</a>
+      <a href="#evaluation">Evaluation</a>
+      <a href="#run">Run it</a>
+    </div>
+    <a class="btn sm" href="https://github.com/niranjan19m-source/claimpilot">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.7.5.5 5.7.5 12a11.5 11.5 0 0 0 7.9 10.9c.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 0 1 5.8 0c2.2-1.5 3.2-1.2 3.2-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A11.5 11.5 0 0 0 23.5 12C23.5 5.7 18.3.5 12 .5Z"/></svg>
+      GitHub
+    </a>
+  </div>
+</nav>
+
+<main id="top">
+  <header class="hero">
+    <div class="wrap">
+      <span class="pill"><span class="dot" aria-hidden="true"></span> Agentic AI Hackathon · Claims Triage track · Open source (MIT)</span>
+      <h1>Intelligent claims.<br><span>Transparent decisions.</span></h1>
+      <p class="lede">ClaimPilot is an autonomous agent that reads an insurance claim, plans an investigation, calls real tools, checks its own work, and recommends where the claim should go. It cites evidence for every conclusion and stops for a human before any denial or fraud referral.</p>
+      <div class="cta">
+        <a class="btn primary" href="https://github.com/niranjan19m-source/claimpilot">View source on GitHub</a>
+        <a class="btn" href="#run">Run it locally</a>
+      </div>
+      <figure class="shot">
+        <img src="live-investigation.png" width="1680" height="2045" alt="ClaimPilot live investigation screen: a ten-stage workflow, a terminal-style agent trace, the investigation plan with hypotheses, and evidence activity for a suspicious flood claim." loading="eager">
+        <figcaption>Live investigation of a ₹6.85 L flood claim. Weather records show 0 mm of rain, the photos predate the policy, and the claimant links to a fraud ring, so it is routed to SIU and paused for a human.</figcaption>
+      </figure>
+    </div>
+  </header>
+
+  <section aria-labelledby="why">
+    <div class="wrap">
+      <div class="eyebrow">The problem</div>
+      <h2 id="why">Triage takes days. ClaimPilot takes seconds.</h2>
+      <p class="sub">Claims teams read every document by hand, check policy wording clause by clause, and rely on instinct to spot fraud. ClaimPilot does the investigation and leaves the judgement to people.</p>
+      <div class="compare">
+        <div class="card"><h3>Today</h3><ul>
+          <li><span class="x">✕</span>Every claim is read manually, simple or not</li>
+          <li><span class="x">✕</span>Fraud checks depend on the handler's instinct</li>
+          <li><span class="x">✕</span>Coverage calls vary from handler to handler</li>
+          <li><span class="x">✕</span>Missing documents stall claims silently</li>
+          <li><span class="x">✕</span>"Why was this flagged?" is hard to answer</li>
+        </ul></div>
+        <div class="card"><h3>With ClaimPilot</h3><ul>
+          <li><span class="ok">✓</span>Low-risk, covered, complete claims are approved straight through</li>
+          <li><span class="ok">✓</span>Weather, photo metadata, reused images and shared identifiers are checked on every claim</li>
+          <li><span class="ok">✓</span>A rules engine applies the policy wording and shows the arithmetic</li>
+          <li><span class="ok">✓</span>The agent requests documents, waits, and re-plans when they arrive</li>
+          <li><span class="ok">✓</span>Every score traces to flags, and every flag to evidence</li>
+        </ul></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how" aria-labelledby="how-h">
+    <div class="wrap">
+      <div class="eyebrow">How it works</div>
+      <h2 id="how-h">A real agent loop, not a single prompt</h2>
+      <p class="sub">A LangGraph state machine. Claude decides what to investigate and what the evidence means. Auditable code turns evidence into scores and routes. People sign off on denials and fraud referrals.</p>
+      <div class="pipe">
+        <div class="step"><b>Intake</b><span>Reads form, PDFs and photos; extracts facts; masks personal data before any LLM call.</span><br><span class="who llm">CLAUDE</span></div>
+        <div class="step"><b>Plan</b><span>Chooses light, standard or deep investigation and states the hypotheses to test.</span><br><span class="who llm">CLAUDE</span></div>
+        <div class="step"><b>Investigate</b><span>Tool-use loop: calls tools in parallel, adapts to results, records cited findings.</span><br><span class="who llm">CLAUDE + TOOLS</span></div>
+        <div class="step"><b>Verify</b><span>A critic checks required evidence and valid citations, and sends gaps back to investigate again.</span><br><span class="who code">CODE</span></div>
+        <div class="step"><b>Decide</b><span>Explainable fraud score, severity points, clause-cited coverage, routing policy.</span><br><span class="who code">CODE</span></div>
+        <div class="step"><b>Report</b><span>Cited triage report, handler brief and a courteous claimant letter.</span><br><span class="who llm">CLAUDE</span></div>
+        <div class="step"><b>Human gates</b><span>Pauses for missing documents or for adjuster sign-off on SIU, denials and low confidence.</span><br><span class="who human">HUMAN</span></div>
+        <div class="step"><b>Act</b><span>Creates the ticket, assigns by role, authority, region and caseload, sets the SLA, notifies.</span><br><span class="who code">CODE</span></div>
+      </div>
+      <div class="loops"><span><b>Verify → Investigate</b> when evidence is missing (max 2 loops)</span><span><b>Gate → Intake</b> when documents arrive (full re-plan)</span><span>State check-pointed to SQLite, so paused claims survive restarts</span></div>
+
+      <div class="terminal" style="margin-top:28px" role="img" aria-label="Sample of the agent trace">
+        <div class="bar"><i></i><i></i><i></i> agent-trace · CLM-2611-1002 (actual output)</div>
+<pre><span class="t">[11:14:28]</span> <span class="a1">PLANNER </span> Deep investigation plan: 11 steps
+<span class="t">[11:14:29]</span> <span class="a3">RESULT  </span> Policy admin lookup: active; premium paid; 6 days after start <span class="r">→ Loss within 15 days of inception +22</span>
+<span class="t">[11:14:30]</span> <span class="a3">RESULT  </span> Image forensics: 2 photos, 2 flagged <span class="r">→ EXIF date 2026-10-12 precedes policy start +30</span>
+<span class="t">[11:14:31]</span> <span class="a3">RESULT  </span> Historical weather (Open-Meteo): INCONSISTENT, 0 mm rain in 72h <span class="r">+30</span>
+<span class="t">[11:14:32]</span> <span class="a3">RESULT  </span> Entity link analysis: 9 linked claims, 5 people, 3 fraud-repudiated <span class="r">+25</span>
+<span class="t">[11:14:33]</span> <span class="a4">VERIFIER</span> All checks passed; confidence 90%
+<span class="t">[11:14:33]</span> <span class="a5">ROUTER  </span> Recommend Special Investigations Unit (P2), human sign-off required
+<span class="t">[11:14:33]</span> <span class="a2">SYSTEM  </span> Paused, waiting for an adjuster decision</pre>
+      </div>
+    </div>
+  </section>
+
+  <section id="product" aria-labelledby="product-h">
+    <div class="wrap">
+      <div class="eyebrow">Product</div>
+      <h2 id="product-h">A glassbox dashboard for adjusters</h2>
+      <p class="sub">The agent is visible. Every plan, tool call, result and decision streams from the backend and opens down to its raw input and output.</p>
+
+      <div class="split">
+        <div class="txt">
+          <div class="eyebrow">Command center</div>
+          <h3>Every claim, triaged and on the board</h3>
+          <p>Fast track, standard review, SIU and awaiting-documents columns show live risk and confidence. To reroute a claim, drag it; you must give a reason, and the card only moves after the backend accepts.</p>
+          <ul class="ticks"><li>Real metrics from the database, labelled as demo data</li><li>Honest service status: connected, mock or not configured</li><li>Global search, notifications, filters</li></ul>
+        </div>
+        <div class="frame"><img src="overview.png" width="1600" height="1146" alt="Adjuster command center with metrics and a four-column claims board." loading="lazy"></div>
+      </div>
+
+      <div class="split rev">
+        <div class="frame"><img src="claim-workspace.png" width="1760" height="2140" alt="Three-pane claim workspace: original documents, agent synthesis with verified facts and scores, and the decision center with evidence-linked explanations." loading="lazy"></div>
+        <div class="txt">
+          <div class="eyebrow">Claim workspace</div>
+          <h3>Ground truth, synthesis, and the why</h3>
+          <p>Original documents sit beside what the agent extracted, and each fact is marked verified, discrepancy or unverified. Each risk flag links to its evidence, and each coverage finding opens the exact policy clause.</p>
+          <ul class="ticks"><li>Decision center: approve, request documents, refer to SIU, escalate, override</li><li>Overrides require a reason and are stored next to the original recommendation</li><li>ClaimPilot never issues a final denial on its own</li></ul>
+        </div>
+      </div>
+
+      <div class="split">
+        <div class="txt">
+          <div class="eyebrow">Fraud intelligence</div>
+          <h3>Forensics and relationship mapping</h3>
+          <p>Photo EXIF time and GPS, editing software and perceptual-hash matches against every past claim photo. An interactive graph links claims through shared phones, bank accounts, people and garages, and every edge shows the record that created it.</p>
+          <ul class="ticks"><li>Flags are leads to investigate, not proof of wrongdoing</li><li>Reverse image search shown as "not configured", never faked</li></ul>
+        </div>
+        <div class="frame"><img src="fraud-graph.png" width="1600" height="1100" alt="Fraud intelligence relationship graph linking a claim to a fraud ring through shared phone, bank account and garage." loading="lazy"></div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="tools-h">
+    <div class="wrap">
+      <div class="eyebrow">Tools</div>
+      <h2 id="tools-h">13 investigation tools</h2>
+      <p class="sub">Deterministic, auditable functions. The model chooses which to call and interprets the results; it never invents the facts they return.</p>
+      <div class="grid c3">
+        <div class="card"><h3>Coverage rules engine</h3><p>Clause-cited checks with a line-by-line payable: depreciation, deductible, IDV cap, waiting periods, room-rent proportionate deduction, co-pay.</p></div>
+        <div class="card"><h3>Historical weather</h3><p>Live Open-Meteo archive API: did the claimed flood, storm or hail actually happen at that place and date?</p></div>
+        <div class="card"><h3>Image forensics</h3><p>EXIF capture time and GPS against the loss and policy dates, editing software, and perceptual-hash reuse detection.</p></div>
+        <div class="card"><h3>Entity link analysis</h3><p>NetworkX graph over claims, people, phones, bank accounts, garages and hospitals; surfaces clusters and hotspots.</p></div>
+        <div class="card"><h3>Anomaly model</h3><p>Isolation Forest trained on historical genuine claims scores how unusual a claim's profile is.</p></div>
+        <div class="card"><h3>Document review</h3><p>PDF extraction, required-document checklist, and cross-checks such as claimed amount vs. bill, or FIR date vs. loss date.</p></div>
+        <div class="card"><h3>Policy admin &amp; wording</h3><p>Policy status, period, premium and insured assets; semantic search over the policy wording.</p></div>
+        <div class="card"><h3>Damage assessment</h3><p>Claude vision describes the damage and checks it against the claimant's account (LLM mode).</p></div>
+        <div class="card"><h3>Registry, geocoding, history, ticketing</h3><p>Vehicle registry (mocked), OpenStreetMap geocoding, claim frequency, and ticket/SLA/notification actions.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="scenarios" aria-labelledby="scen-h">
+    <div class="wrap">
+      <div class="eyebrow">Demo scenarios</div>
+      <h2 id="scen-h">Eight claims that exercise every branch</h2>
+      <p class="sub">Motor and health lines. All data is synthetic; weather data is real.</p>
+      <div class="tablewrap">
+        <table class="table">
+          <thead><tr><th>Scenario</th><th>What the agent finds</th><th>Outcome</th></tr></thead>
+          <tbody>
+            <tr><td>Cracked windshield, ₹8,400</td><td>Light plan, 5 checks, covered after deductible</td><td><span class="tag tg">Auto-approved</span></td></tr>
+            <tr><td>Basement flood, policy 6 days old, ₹6.85 L</td><td>0 mm rain, photos predate the policy, edited image, fraud-ring link</td><td><span class="tag tr">SIU · human review</span></td></tr>
+            <tr><td>Monsoon street flood, Chennai</td><td>Weather confirms; engine damage excluded without Engine Protect</td><td><span class="tag tb">Partial cover</span></td></tr>
+            <tr><td>Knee replacement, 15 months into cover</td><td>Clause H-4.3: 24-month specified-disease wait</td><td><span class="tag ty">Coverage review</span></td></tr>
+            <tr><td>Overnight vehicle theft, no FIR</td><td>Requests the FIR, pauses, re-plans on upload</td><td><span class="tag ty">Awaiting documents</span></td></tr>
+            <tr><td>Flyover collision, rider injured</td><td>Third-party bodily injury (MACT exposure)</td><td><span class="tag tr">Critical · senior</span></td></tr>
+            <tr><td>Parking-lot fender bender</td><td>Photo matches one from a 2025 claim (perceptual hash)</td><td><span class="tag tr">SIU</span></td></tr>
+            <tr><td>Emergency appendectomy, deluxe room</td><td>Room rent above the 1% cap, so a proportionate deduction applies</td><td><span class="tag tb">Medical review</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="evaluation" aria-labelledby="eval-h">
+    <div class="wrap">
+      <div class="eyebrow">Evaluation</div>
+      <h2 id="eval-h">Measured, with the caveats stated</h2>
+      <p class="sub">68 labelled synthetic claims across 17 archetypes, each run end to end through the agent graph in deterministic mode.</p>
+      <div class="grid c4">
+        <div class="metric"><div class="v">100%</div><div class="l">Routing accuracy</div></div>
+        <div class="metric"><div class="v">100%</div><div class="l">Coverage decision accuracy</div></div>
+        <div class="metric"><div class="v">1.0 / 1.0</div><div class="l">Fraud precision / recall</div></div>
+        <div class="metric"><div class="v">0%</div><div class="l">Genuine claims sent to SIU</div></div>
+      </div>
+      <p class="note"><b>Read these numbers honestly.</b> The data and labels are synthetic and were written by the same team as the rules. The first run scored 47% routing (a harness bug plus two real calibration gaps), and the SIU rules were then calibrated on this set, so the scores are optimistic. A held-out archetype written after calibration passes. Real-world accuracy would need real claims.</p>
+      <div class="frame" style="margin-top:20px"><img src="evaluation.png" width="1440" height="1100" alt="Evaluation page with metrics, routing confusion matrix and per-archetype results." loading="lazy"></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="rai-h">
+    <div class="wrap">
+      <div class="eyebrow">Responsible AI</div>
+      <h2 id="rai-h">Built to be trusted</h2>
+      <div class="grid c3" style="margin-top:24px">
+        <div class="card"><h3>PII masking</h3><p>Phones, emails, PAN, Aadhaar, account numbers and names become stable pseudonyms before any LLM call. Link analysis still works.</p></div>
+        <div class="card"><h3>Humans decide</h3><p>Every SIU referral, every denial and any low-confidence decision needs an adjuster, and overrides are audited.</p></div>
+        <div class="card"><h3>No fabricated reasoning</h3><p>The UI shows plans, tool calls, results and decisions. It never shows invented "thoughts".</p></div>
+        <div class="card"><h3>Explainable scores</h3><p>Every fraud point maps to a flag, every flag to evidence, and every coverage call to a clause.</p></div>
+        <div class="card"><h3>Graceful degradation</h3><p>A failed tool lowers confidence instead of crashing. An LLM outage falls back to the rules plan.</p></div>
+        <div class="card"><h3>Never accuses</h3><p>Claimant letters contain no fraud language. Indicators go to investigators only.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="run" aria-labelledby="run-h">
+    <div class="wrap">
+      <div class="eyebrow">Run it</div>
+      <h2 id="run-h">One command, locally</h2>
+      <p class="sub">Requires Python 3.12+ and Node.js 20+. Without an API key it runs in deterministic mode: same graph, tools, scoring and gates, with a rules-based planner.</p>
+<pre class="code"><span class="c"># clone and start (installs, seeds demo data, builds, runs)</span>
+git clone https://github.com/niranjan19m-source/claimpilot.git
+cd claimpilot
+<span class="c"># optional: enable the full LLM agent</span>
+export ANTHROPIC_API_KEY=sk-ant-...
+./start.sh --reset
+<span class="c"># → http://localhost:3000</span></pre>
+      <div style="margin-top:28px">
+        <div class="eyebrow" style="margin-bottom:12px">Tech stack</div>
+        <div class="stack"><span>LangGraph</span><span>Claude (Opus 5.5 · Haiku 5.5)</span><span>FastAPI</span><span>SQLite</span><span>scikit-learn</span><span>NetworkX</span><span>Open-Meteo API</span><span>Next.js 15</span><span>React 19</span><span>TypeScript</span><span>Tailwind CSS v4</span><span>shadcn/ui</span><span>React Flow</span><span>Recharts</span><span>Framer Motion</span><span>pytest</span></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>ClaimPilot · MIT License · All claims, policies and people shown are synthetic.</span>
+    <span>Built with Claude Code · <a href="https://github.com/niranjan19m-source/claimpilot">Source on GitHub</a></span>
+  </div>
+</footer>
+</body>
+</html>

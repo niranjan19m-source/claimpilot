@@ -2,6 +2,8 @@
 
 **Agentic AI Hackathon · Track: Claims Triage Agent (Insurance)**
 
+🌐 **Project website:** https://niranjan19m-source.github.io/claimpilot/
+
 ClaimPilot reads an insurance claim (form, free-text account, photos, PDFs), **plans an investigation, calls tools, checks its own work**, and returns a **severity, coverage and fraud-risk assessment**. It then **routes the claim to the right handler and carries out the actions**: ticket, assignment, SLA, notifications, payment for straight-through claims. It stops for a human before any denial or fraud referral.
 
 > A triage desk spends days per claim reading documents, checking the policy, hunting for fraud signals and deciding who handles it. ClaimPilot does it in seconds and cites the evidence for every conclusion.
