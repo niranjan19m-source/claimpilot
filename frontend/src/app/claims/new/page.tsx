@@ -4,7 +4,7 @@ import { Loader2, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button, Card, SectionTitle } from "@/components/legacy";
-import { API, api } from "@/lib/api";
+import { API, READ_ONLY, READ_ONLY_MSG, api } from "@/lib/api";
 
 const MOTOR_TYPES = ["collision", "windshield", "theft", "flood", "storm", "hailstorm", "fire", "vandalism"];
 const input = "h-10 w-full rounded-lg border border-border-strong bg-card px-3 text-sm outline-none focus:border-indigo-400";
@@ -99,7 +99,7 @@ export default function NewClaim() {
         </Card>
         {err && <div className="text-sm text-risk">{err}</div>}
         <div className="flex justify-end">
-          <Button type="submit" disabled={busy}>{busy && <Loader2 size={15} className="animate-spin" />} Submit and start triage</Button>
+          {READ_ONLY && <span className="mr-3 self-center text-[12.5px] text-missing">{READ_ONLY_MSG}</span>}<Button type="submit" disabled={busy || READ_ONLY}>{busy && <Loader2 size={15} className="animate-spin" />} Submit and start triage</Button>
         </div>
       </form>
     </div>

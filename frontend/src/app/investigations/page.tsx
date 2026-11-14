@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { EmptyState, ErrorState, PageHeader, SkeletonRows, Tag, fraudTone, statusTone } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { useApi } from "@/hooks/use-api";
-import { ClaimRow, STATUS_LABEL, Scenario, inr, postJSON, titleCase } from "@/lib/api";
+import { ClaimRow, READ_ONLY, STATUS_LABEL, Scenario, inr, postJSON, titleCase } from "@/lib/api";
 
 export default function Investigations() {
   const router = useRouter();
@@ -56,7 +56,7 @@ export default function Investigations() {
           </section>}
           {fresh.length > 0 && <section>
             <h2 className="mb-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Ready to investigate ({fresh.length})</h2>
-            <div className="rounded-xl border bg-card">{fresh.map((c) => <Row key={c.id} c={c} action={<Button size="sm" onClick={() => run(c.id)}><Play size={13} /> Start</Button>} />)}</div>
+            <div className="rounded-xl border bg-card">{fresh.map((c) => <Row key={c.id} c={c} action={<Button size="sm" onClick={() => run(c.id)} disabled={READ_ONLY}><Play size={13} /> Start</Button>} />)}</div>
           </section>}
           <section>
             <h2 className="mb-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Completed ({done.length})</h2>

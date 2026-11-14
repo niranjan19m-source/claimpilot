@@ -2,7 +2,7 @@
 
 **Agentic AI Hackathon · Track: Claims Triage Agent (Insurance)**
 
-🌐 **Project website:** https://niranjan19m-source.github.io/claimpilot/
+🌐 **Live demo:** https://niranjan19m-source.github.io/claimpilot/ (hosted replay of a real agent run, read-only) · **About:** https://niranjan19m-source.github.io/claimpilot/about/
 
 ClaimPilot reads an insurance claim (form, free-text account, photos, PDFs), **plans an investigation, calls tools, checks its own work**, and returns a **severity, coverage and fraud-risk assessment**. It then **routes the claim to the right handler and carries out the actions**: ticket, assignment, SLA, notifications, payment for straight-through claims. It stops for a human before any denial or fraud referral.
 
@@ -162,6 +162,8 @@ Later runs: `./start.sh` keeps existing data, `./start.sh --reset` rebuilds the 
 | Graph, tools, verifier, scoring, gates, actions | same | same |
 
 Deterministic mode is free and reproducible, and it is your fallback if the venue network fails.
+
+**Hosted demo:** the public site is a static, read-only replay of a real agent run. To regenerate it after changing the code, run `./build-pages.sh`, then commit and push.
 
 <details><summary>Manual start (without the script)</summary>
 

@@ -3,11 +3,62 @@
 
 export const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+/** Hosted read-only demo: the UI reads a recorded real backend run instead of a live API. */
+export const SNAPSHOT = process.env.NEXT_PUBLIC_SNAPSHOT === "1";
+export const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+export const READ_ONLY = SNAPSHOT;
+export const READ_ONLY_MSG = "This hosted demo is a read-only recording of a real agent run, so actions are disabled.";
+
 export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
 
+const snapCache = new Map<string, Promise<any>>();
+function snapshotFile(path: string) {
+  return `${BASE_PATH}/snapshot/${path.replace(/^\/api\//, "").replace(/\//g, "__")}.json`;
+}
+const has = (hay: string, q: string) => hay.toLowerCase().includes(q.toLowerCase());
+
+/** Applies the same query filters the backend would, so filtered views work offline. */
+function filterSnapshot(path: string, q: URLSearchParams, data: any) {
+  const get = (k: string) => q.get(k);
+  if (path === "/api/evidence") return data.filter((e: any) => (!get("claim_id") || e.claim_id === get("claim_id"))
+    && (!get("category") || e.category === get("category")) && (!get("status") || e.status === get("status"))
+    && (!get("q") || has(`${e.summary} ${e.label} ${e.claim_id}`, get("q")!)));
+  if (path === "/api/audit") return data.filter((a: any) => (!get("claim_id") || a.claim_id === get("claim_id"))
+    && (!get("category") || a.category === get("category")) && (!get("q") || has(`${a.text} ${a.claim_id} ${a.actor}`, get("q")!)));
+  if (path === "/api/decisions") return data.filter((d: any) => !get("claim_id") || d.claim_id === get("claim_id"));
+  if (path === "/api/policy-library") {
+    const words = (get("q") ?? "").toLowerCase().split(/\s+/).filter(Boolean);
+    let clauses = data.clauses.filter((c: any) => (!get("product") || c.product === get("product")) && (!get("kind") || c.kind === get("kind")));
+    if (words.length) {
+      clauses = clauses.map((c: any) => ({ ...c, score: words.filter((w: string) => has(`${c.title} ${c.text}`, w)).length / words.length }))
+        .filter((c: any) => c.score > 0).sort((a: any, b: any) => b.score - a.score);
+    }
+    return { ...data, clauses };
+  }
+  return data;
+}
+
+async function snapshotApi<T>(path: string, init?: RequestInit): Promise<T> {
+  if (init?.method && init.method !== "GET") throw new ApiError(405, READ_ONLY_MSG);
+  const [p, qs] = path.split("?");
+  if (!snapCache.has(p)) {
+    snapCache.set(p, fetch(snapshotFile(p)).then((r) => {
+      if (!r.ok) throw new ApiError(404, "Not included in the hosted demo snapshot.");
+      return r.json();
+    }));
+  }
+  try {
+    return filterSnapshot(p, new URLSearchParams(qs ?? ""), await snapCache.get(p)) as T;
+  } catch (e) {
+    snapCache.delete(p);
+    throw e;
+  }
+}
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  if (SNAPSHOT) return snapshotApi<T>(path, init);
   let r: Response;
   try {
     r = await fetch(`${API}${path}`, { cache: "no-store", ...init });
@@ -28,7 +79,9 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
 export const postJSON = <T,>(path: string, body?: unknown) =>
   api<T>(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
 
-export const fileUrl = (docId: number) => `${API}/api/documents/${docId}/file`;
+export const fileUrl = (docId: number, filename?: string) => SNAPSHOT
+  ? `${BASE_PATH}/snapshot/files/${docId}${(filename?.match(/\.[a-z0-9]+$/i)?.[0] ?? "").toLowerCase()}`
+  : `${API}/api/documents/${docId}/file`;
 
 // ------------------------------------------------------------------ domain types
 export type Queue = "fast_track" | "standard" | "senior" | "medical" | "siu" | "coverage_review";

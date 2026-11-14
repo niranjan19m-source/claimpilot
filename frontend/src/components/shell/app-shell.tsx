@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useApi } from "@/hooks/use-api";
-import { ClaimRow, STATUS_LABEL, SystemStatus, inr, titleCase } from "@/lib/api";
+import { ClaimRow, SNAPSHOT, STATUS_LABEL, SystemStatus, inr, titleCase } from "@/lib/api";
 import { CURRENT_USER } from "@/lib/user";
 import { cn } from "@/lib/utils";
 
@@ -121,6 +121,14 @@ const SERVICE_LABEL: Record<string, string> = {
 function SystemIndicator() {
   const { data, error } = useApi<SystemStatus>("/api/status", 30000);
   const down = !!error && !data;
+  if (SNAPSHOT) return (
+    <Tooltip>
+      <TooltipTrigger className="flex h-8 items-center gap-2 rounded-md border px-2.5 text-[12px]" aria-label="Hosted demo status">
+        <span className="h-2 w-2 rounded-full bg-amber-400" /><span className="hidden sm:inline">Recorded run</span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs">Static, read-only replay of a real backend run. No live agent or external services are called from this site.</TooltipContent>
+    </Tooltip>
+  );
   const degraded = data && Object.values(data.services).some((s) => s.state === "unavailable" || s.state === "degraded");
   return (
     <Popover>
@@ -303,6 +311,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </DropdownMenu>
           </div>
         </header>
+        {SNAPSHOT && (
+          <div role="note" className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-b border-missing-line bg-missing-bg px-4 py-2 text-center text-[12.5px] text-amber-100">
+            <b className="font-semibold text-missing">Hosted demo.</b>
+            Every claim here was investigated by the real ClaimPilot agent; this site replays that recorded run on synthetic data, so actions are read-only.
+            <a href="https://github.com/niranjan19m-source/claimpilot" className="font-medium text-missing underline underline-offset-2">Source on GitHub</a>
+            <span className="text-zinc-600">·</span>
+            <a href={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/about/`} className="font-medium text-missing underline underline-offset-2">About the project</a>
+          </div>
+        )}
         <main id="main" className="canvas-grid min-w-0 flex-1 px-4 py-6 sm:px-6">{children}</main>
       </div>
     </div>

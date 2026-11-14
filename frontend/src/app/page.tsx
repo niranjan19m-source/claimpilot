@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useApi } from "@/hooks/use-api";
-import { ClaimRow, Scenario, postJSON, titleCase } from "@/lib/api";
+import { ClaimRow, READ_ONLY, Scenario, postJSON, titleCase } from "@/lib/api";
 import { REVIEWER } from "@/lib/user";
 import { cn } from "@/lib/utils";
 
@@ -74,7 +74,7 @@ export default function Overview() {
   return (
     <div className="mx-auto max-w-[1600px]">
       <PageHeader title="Adjuster command center · Intelligent claims, transparent decisions"
-        description="The agent investigates every claim and places it on the board. To reroute a claim, drag its card. The move only happens after you give a reason and the backend accepts it."
+        description={READ_ONLY ? "Every claim below was investigated by the real agent; this hosted demo replays that recorded run. Open any card to see the evidence, the agent trace and the explanation." : "The agent investigates every claim and places it on the board. To reroute a claim, drag its card. The move only happens after you give a reason and the backend accepts it."}
         actions={<Link href="/claims/new"><Button>New claim</Button></Link>} />
 
       {claims.error && !claims.data && <div className="mb-4"><ErrorState title="Backend unavailable" message={claims.error} onRetry={claims.reload} /></div>}
@@ -108,7 +108,7 @@ export default function Overview() {
                   {c.status === "triaging" ? (
                     <Link href={`/investigations/${c.id}`}><Button size="sm" variant="outline"><Radar size={13} className="cp-pulse" /> Watch</Button></Link>
                   ) : (
-                    <Button size="sm" onClick={() => start(c.id)} disabled={starting === c.id}>
+                    <Button size="sm" onClick={() => start(c.id)} disabled={starting === c.id || READ_ONLY}>
                       {starting === c.id ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />} Investigate
                     </Button>
                   )}
@@ -166,7 +166,7 @@ function Column({ col, claims, loading, dragging }: { col: (typeof COLUMNS)[numb
 }
 
 function DraggableCard({ c }: { c: ClaimRow }) {
-  const movable = ["assigned", "approved", "awaiting_review"].includes(c.status);
+  const movable = ["assigned", "approved", "awaiting_review"].includes(c.status) && !READ_ONLY;
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: c.id, disabled: !movable });
   return (
     <div ref={setNodeRef}>

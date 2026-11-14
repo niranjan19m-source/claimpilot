@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useApi } from "@/hooks/use-api";
-import { API, Evidence, dateTime, titleCase } from "@/lib/api";
+import { API, Evidence, READ_ONLY, dateTime, titleCase } from "@/lib/api";
 
 type Clause = { product: string; id: string; title: string; text: string; kind: string; source: string; score?: number };
 type Library = { products: { code: string; file: string }[]; clauses: Clause[]; uploads: { id: number; name: string; filename: string; status: string; created_at: string; clauses: { id: string; title: string }[] }[] };
@@ -50,7 +50,7 @@ export default function PolicyLibrary() {
     <div className="mx-auto max-w-[1400px]">
       <PageHeader title="Policy library" description="Policy wording as written, clause by clause. Each card keeps the extracted text, how the coverage engine applied it, and the human determination separate."
         actions={<><input ref={input} type="file" accept=".pdf,.md,.txt" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
-          <Button variant="outline" onClick={() => input.current?.click()} disabled={busy}>{busy ? <Loader2 size={14} className="animate-spin" /> : <FileUp size={14} />} Upload policy</Button></>} />
+          <Button variant="outline" onClick={() => input.current?.click()} disabled={busy || READ_ONLY}>{busy ? <Loader2 size={14} className="animate-spin" /> : <FileUp size={14} />} Upload policy</Button></>} />
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <form onSubmit={(e) => { e.preventDefault(); setQuery(q); }} className="flex gap-2">
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search wording, e.g. flood engine damage" className="h-8 w-80 text-[12.5px]" aria-label="Search policy text" />

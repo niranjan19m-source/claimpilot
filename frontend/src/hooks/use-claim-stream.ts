@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { API, AgentEvent, ClaimDetail, api } from "@/lib/api";
+import { API, AgentEvent, ClaimDetail, SNAPSHOT, api } from "@/lib/api";
 
 /** Events that change persisted claim state, so the detail record is refetched. */
 const REFRESH_ON = new Set(["assessment", "routing", "report", "action", "interrupt", "run_completed", "paused",
@@ -11,11 +11,13 @@ export type StreamState = "connecting" | "live" | "reconnecting";
 
 /** Claim detail + the live agent event stream (Server-Sent Events).
  *  Reconnects with backoff and resumes from the last event id, so nothing is lost or duplicated. */
-export function useClaimStream(id: string | null) {
+export function useClaimStream(id: string | null, opts: { replay?: boolean } = {}) {
   const [detail, setDetail] = useState<ClaimDetail | null>(null);
   const [events, setEvents] = useState<AgentEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [stream, setStream] = useState<StreamState>("connecting");
+  const [replaying, setReplaying] = useState(false);
+  const [replayKey, setReplayKey] = useState(0);
   const lastId = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -29,8 +31,33 @@ export function useClaimStream(id: string | null) {
     timer.current = setTimeout(refresh, 150);
   }, [refresh]);
 
+  // Hosted demo: replay the recorded event log of a real run with its original pacing.
   useEffect(() => {
-    if (!id) return;
+    if (!id || !SNAPSHOT) return;
+    let cancelled = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    refresh();
+    setStream("live");
+    api<AgentEvent[]>(`/api/claims/${id}/events`).then((all) => {
+      if (cancelled) return;
+      if (!opts.replay) { setEvents(all); return; }
+      setEvents([]);
+      setReplaying(true);
+      let t = 300;
+      all.forEach((ev, i) => {
+        const gap = i ? new Date(ev.ts).getTime() - new Date(all[i - 1].ts).getTime() : 0;
+        t += Math.min(650, Math.max(ev.type === "node" ? 20 : 90, gap));
+        timers.push(setTimeout(() => {
+          setEvents((prev) => [...prev, ev]);
+          if (i === all.length - 1) setReplaying(false);
+        }, t));
+      });
+    }).catch((e) => setError(e.message));
+    return () => { cancelled = true; timers.forEach(clearTimeout); };
+  }, [id, opts.replay, refresh, replayKey]);
+
+  useEffect(() => {
+    if (!id || SNAPSHOT) return;
     lastId.current = 0;
     setEvents([]);
     refresh();
@@ -62,5 +89,6 @@ export function useClaimStream(id: string | null) {
 
   /** Drop events from a previous run (the server clears the log on re-run; ids stay monotonic). */
   const resetEvents = useCallback(() => setEvents([]), []);
-  return { detail, events, error, stream, refresh, resetEvents };
+  const replay = useCallback(() => setReplayKey((k) => k + 1), []);
+  return { detail, events, error, stream, refresh, resetEvents, replaying, replay };
 }

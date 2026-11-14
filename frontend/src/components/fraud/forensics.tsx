@@ -37,7 +37,7 @@ export function ImageForensicsPanel({ entry, incidentDate, policyStart }: { entr
             <article key={p.filename} className="overflow-hidden rounded-xl border bg-raised">
               <div className="relative aspect-[16/9] bg-sunken">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={fileUrl(p.document_id)} alt={`Damage photo ${p.filename}`} className="h-full w-full object-cover" />
+                <img src={fileUrl(p.document_id, p.filename)} alt={`Damage photo ${p.filename}`} className="h-full w-full object-cover" />
                 <div className="absolute left-2 top-2 flex flex-wrap gap-1">
                   {p.flags.length ? <Tag tone="risk">{p.flags.length} discrepanc{p.flags.length > 1 ? "ies" : "y"}</Tag> : <Tag tone="verified" icon={<CheckCircle2 size={10} />}>No discrepancies</Tag>}
                 </div>

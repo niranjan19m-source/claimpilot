@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useApi } from "@/hooks/use-api";
-import { ClaimDetail, HumanDecision, QUEUE_LABEL, Queue, dateTime, postJSON } from "@/lib/api";
+import { ClaimDetail, HumanDecision, QUEUE_LABEL, Queue, READ_ONLY, READ_ONLY_MSG, dateTime, postJSON } from "@/lib/api";
 import { REVIEWER } from "@/lib/user";
 
 type Kind = "approve" | "override" | "escalate_senior" | "further_investigation" | "request_documents";
@@ -52,7 +52,7 @@ export function DecisionCenter({ detail, onChanged, openEvidence }: {
       </Panel>
     );
   }
-  const actionable = ["awaiting_review", "assigned", "approved"].includes(c.status) && !detail.running;
+  const actionable = ["awaiting_review", "assigned", "approved"].includes(c.status) && !detail.running && !READ_ONLY;
   const paused = c.status === "awaiting_review";
   const supporting = [...new Set(a.fraud.signals.flatMap((s) => s.evidence ?? []))];
   const unresolved = [...(t.finished?.open_questions ?? []), ...a.coverage.needs_info, ...a.documents.missing.map((m) => `Missing: ${m}`),
@@ -100,7 +100,7 @@ export function DecisionCenter({ detail, onChanged, openEvidence }: {
 
         {!actionable && (
           <div className="rounded-md border border-missing-line bg-missing-bg px-3 py-2 text-[12px] text-missing">
-            {detail.running ? "The agent is running; decisions unlock when it pauses or finishes." :
+            {READ_ONLY ? READ_ONLY_MSG + " Run ClaimPilot locally to make decisions." : detail.running ? "The agent is running; decisions unlock when it pauses or finishes." :
               c.status === "awaiting_documents" ? "Waiting for claimant documents. Upload them in the Ground Truth pane to resume." :
                 "Decisions are unavailable in the current state."}
           </div>

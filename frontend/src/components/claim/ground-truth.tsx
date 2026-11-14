@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { EmptyState, Panel, Tag } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { API, ClaimDetail, ClaimDocument, dateTime, fileUrl, titleCase } from "@/lib/api";
+import { API, ClaimDetail, ClaimDocument, READ_ONLY, dateTime, fileUrl, titleCase } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const MAX_MB = 15;
@@ -47,13 +47,13 @@ export function GroundTruthPane({ detail, onUploaded }: { detail: ClaimDetail; o
 
   return (
     <Panel title="Ground truth · original material" bodyClass="p-0"
-      action={<Button size="sm" variant="outline" onClick={() => input.current?.click()} disabled={busy}>
+      action={<Button size="sm" variant="outline" onClick={() => input.current?.click()} disabled={busy || READ_ONLY} title={READ_ONLY ? "Disabled in the hosted read-only demo" : undefined}>
         {busy ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />} Upload</Button>}>
       <input ref={input} type="file" multiple accept={ALLOWED.join(",")} className="hidden" onChange={(e) => upload(Array.from(e.target.files ?? []))} />
       {detail.claim.status === "awaiting_documents" && (
         <div className="m-3 rounded-md border border-missing-line bg-missing-bg p-3 text-[12px] text-missing">
           The agent is paused waiting for claimant documents. Uploading resumes the investigation.
-          {detail.claim.id === "CLM-2611-1005" && <Button size="sm" variant="outline" className="mt-2 w-full" onClick={sample} disabled={busy}>Simulate claimant uploading FIR</Button>}
+          {detail.claim.id === "CLM-2611-1005" && <Button size="sm" variant="outline" className="mt-2 w-full" onClick={sample} disabled={busy || READ_ONLY}>Simulate claimant uploading FIR</Button>}
         </div>
       )}
       {docs.length === 0 ? <div className="p-3"><EmptyState title="No documents uploaded" body="Upload the claim form, photos and supporting PDFs." /></div> : (
@@ -95,17 +95,17 @@ function DocumentViewer({ doc, zoom, setZoom }: { doc: ClaimDocument; zoom: numb
             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom(1)} aria-label="Reset zoom"><RotateCcw size={12} /></Button>
           </>}
           <Button size="icon" variant="ghost" className="h-7 w-7" asChild aria-label="Download">
-            <a href={fileUrl(doc.id)} download={doc.filename}><Download size={13} /></a>
+            <a href={fileUrl(doc.id, doc.filename)} download={doc.filename}><Download size={13} /></a>
           </Button>
         </div>
       </div>
       <div className="mx-3 overflow-auto rounded-lg border bg-sunken scroll-thin" style={{ height: 380 }}>
         {isImg ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={fileUrl(doc.id)} alt={`Claim photo ${doc.filename}`} className="origin-top-left transition-transform"
+          <img src={fileUrl(doc.id, doc.filename)} alt={`Claim photo ${doc.filename}`} className="origin-top-left transition-transform"
             style={{ transform: `scale(${zoom})`, width: "100%" }} />
         ) : isPdf ? (
-          <iframe src={`${fileUrl(doc.id)}#toolbar=0&view=FitH`} title={doc.filename} className="h-full w-full bg-white" />
+          <iframe src={`${fileUrl(doc.id, doc.filename)}#toolbar=0&view=FitH`} title={doc.filename} className="h-full w-full bg-white" />
         ) : (
           <div className="p-4 text-[12px] text-zinc-400">Preview not available for this file type. Use download.</div>
         )}
